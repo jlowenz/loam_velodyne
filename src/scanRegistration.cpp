@@ -58,7 +58,7 @@ const int systemDelay = 20;
 int systemInitCount = 0;
 bool systemInited = false;
 
-const int N_SCANS = 16;
+int N_SCANS = 16;
 
 float cloudCurvature[40000];
 int cloudSortInd[40000];
@@ -662,8 +662,11 @@ void imuHandler(const sensor_msgs::Imu::ConstPtr& imuIn)
 int main(int argc, char** argv)
 {
   ros::init(argc, argv, "scanRegistration");
+  ros::NodeHandle cfg("~");
   ros::NodeHandle nh;
 
+  N_SCANS = cfg.param("n_scans", 32);
+  
   ros::Subscriber subLaserCloud = nh.subscribe<sensor_msgs::PointCloud2> 
                                   ("/velodyne_points", 2, laserCloudHandler);
 
