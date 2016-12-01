@@ -32,6 +32,7 @@
 
 #include <cmath>
 #include <vector>
+#include <algorithm>
 
 #include <loam_velodyne/common.h>
 #include <opencv/cv.h>
@@ -59,11 +60,12 @@ int systemInitCount = 0;
 bool systemInited = false;
 
 int N_SCANS = 16;
+const int CLOUD_SIZE = 100000;
 
-float cloudCurvature[40000];
-int cloudSortInd[40000];
-int cloudNeighborPicked[40000];
-int cloudLabel[40000];
+float cloudCurvature[CLOUD_SIZE];
+int cloudSortInd[CLOUD_SIZE];
+int cloudNeighborPicked[CLOUD_SIZE];
+int cloudLabel[CLOUD_SIZE];
 
 int imuPointerFront = 0;
 int imuPointerLast = -1;
@@ -356,6 +358,7 @@ void laserCloudHandler(const sensor_msgs::PointCloud2ConstPtr& laserCloudMsg)
     *laserCloud += laserCloudScans[i];
   }
   int scanCount = -1;
+  std::fill(cloudSortInd, cloudSortInd + CLOUD_SIZE, 0);
   for (int i = 5; i < cloudSize - 5; i++) {
     float diffX = laserCloud->points[i - 5].x + laserCloud->points[i - 4].x 
                 + laserCloud->points[i - 3].x + laserCloud->points[i - 2].x 
@@ -458,11 +461,13 @@ void laserCloudHandler(const sensor_msgs::PointCloud2ConstPtr& laserCloudMsg)
   pcl::PointCloud<PointType> surfPointsLessFlat;
 
   for (int i = 0; i < N_SCANS; i++) {
+    printf("i %d\n", i);
     pcl::PointCloud<PointType>::Ptr surfPointsLessFlatScan(new pcl::PointCloud<PointType>);
     for (int j = 0; j < 6; j++) {
       int sp = (scanStartInd[i] * (6 - j)  + scanEndInd[i] * j) / 6;
       int ep = (scanStartInd[i] * (5 - j)  + scanEndInd[i] * (j + 1)) / 6 - 1;
-
+      printf("sp %d ep %d\n", sp, ep);
+      
       for (int k = sp + 1; k <= ep; k++) {
         for (int l = k; l >= sp + 1; l--) {
           if (cloudCurvature[cloudSortInd[l]] < cloudCurvature[cloudSortInd[l - 1]]) {
