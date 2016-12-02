@@ -38,6 +38,7 @@
 #include <opencv/cv.h>
 #include <nav_msgs/Odometry.h>
 #include <opencv/cv.h>
+#define PCL_NO_PRECOMPILE
 #include <pcl_conversions/pcl_conversions.h>
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
@@ -48,6 +49,7 @@
 #include <sensor_msgs/PointCloud2.h>
 #include <tf/transform_datatypes.h>
 #include <tf/transform_broadcaster.h>
+#include <velodyne_pointcloud/point_types.h>
 
 using std::sin;
 using std::cos;
@@ -224,7 +226,7 @@ void laserCloudHandler(const sensor_msgs::PointCloud2ConstPtr& laserCloudMsg)
   std::vector<int> scanEndInd(N_SCANS, 0);
   
   double timeScanCur = laserCloudMsg->header.stamp.toSec();
-  pcl::PointCloud<pcl::PointXYZ> laserCloudIn;
+  pcl::PointCloud<velodyne_pointcloud::PointXYZIR> laserCloudIn;
   pcl::fromROSMsg(*laserCloudMsg, laserCloudIn);
   std::vector<int> indices;
   pcl::removeNaNFromPointCloud(laserCloudIn, laserCloudIn, indices);
@@ -243,23 +245,24 @@ void laserCloudHandler(const sensor_msgs::PointCloud2ConstPtr& laserCloudMsg)
   PointType point;
   std::vector<pcl::PointCloud<PointType> > laserCloudScans(N_SCANS);
   for (int i = 0; i < cloudSize; i++) {
-    point.x = laserCloudIn.points[i].y;
-    point.y = laserCloudIn.points[i].z;
-    point.z = laserCloudIn.points[i].x;
+    point.x = laserCloudIn.points[i].x;
+    point.y = laserCloudIn.points[i].y;
+    point.z = laserCloudIn.points[i].z;
+    point.intensity = laserCloudIn.points[i].ring;
 
-    float angle = atan(point.y / sqrt(point.x * point.x + point.z * point.z)) * 180 / M_PI;
-    int scanID;
-    int roundedAngle = int(angle + (angle<0.0?-0.5:+0.5)); 
-    if (roundedAngle > 0){
-      scanID = roundedAngle;
-    }
-    else {
-      scanID = roundedAngle + (N_SCANS - 1);
-    }
-    if (scanID > (N_SCANS - 1) || scanID < 0 ){
-      count--;
-      continue;
-    }
+    // float angle = atan(point.y / sqrt(point.x * point.x + point.z * point.z)) * 180 / M_PI;
+    int scanID = point.intensity;
+    // int roundedAngle = int(angle + (angle<0.0?-0.5:+0.5)); 
+    // if (roundedAngle > 0){
+    //   scanID = roundedAngle;
+    // }
+    // else {
+    //   scanID = roundedAngle + (N_SCANS - 1);
+    // }
+    // if (scanID > (N_SCANS - 1) || scanID < 0 ){
+    //   count--;
+    //   continue;
+    // }
 
     float ori = -atan2(point.x, point.z);
     if (!halfPassed) {
@@ -283,7 +286,7 @@ void laserCloudHandler(const sensor_msgs::PointCloud2ConstPtr& laserCloudMsg)
     }
 
     float relTime = (ori - startOri) / (endOri - startOri);
-    point.intensity = scanID + scanPeriod * relTime;
+    // point.intensity = scanID + scanPeriod * relTime;
 
     if (imuPointerLast >= 0) {
       float pointTime = relTime * scanPeriod;
@@ -461,12 +464,12 @@ void laserCloudHandler(const sensor_msgs::PointCloud2ConstPtr& laserCloudMsg)
   pcl::PointCloud<PointType> surfPointsLessFlat;
 
   for (int i = 0; i < N_SCANS; i++) {
-    printf("i %d\n", i);
+    //printf("i %d\n", i);
     pcl::PointCloud<PointType>::Ptr surfPointsLessFlatScan(new pcl::PointCloud<PointType>);
     for (int j = 0; j < 6; j++) {
       int sp = (scanStartInd[i] * (6 - j)  + scanEndInd[i] * j) / 6;
       int ep = (scanStartInd[i] * (5 - j)  + scanEndInd[i] * (j + 1)) / 6 - 1;
-      printf("sp %d ep %d\n", sp, ep);
+      //printf("sp %d ep %d\n", sp, ep);
       
       for (int k = sp + 1; k <= ep; k++) {
         for (int l = k; l >= sp + 1; l--) {
@@ -617,21 +620,21 @@ void laserCloudHandler(const sensor_msgs::PointCloud2ConstPtr& laserCloudMsg)
   pubSurfPointsLessFlat.publish(surfPointsLessFlat2);
 
   pcl::PointCloud<pcl::PointXYZ> imuTrans(4, 1);
-  imuTrans.points[0].x = imuPitchStart;
-  imuTrans.points[0].y = imuYawStart;
-  imuTrans.points[0].z = imuRollStart;
+  imuTrans.points[0].y = imuPitchStart;
+  imuTrans.points[0].z = imuYawStart;
+  imuTrans.points[0].x = imuRollStart;
 
-  imuTrans.points[1].x = imuPitchCur;
-  imuTrans.points[1].y = imuYawCur;
-  imuTrans.points[1].z = imuRollCur;
+  imuTrans.points[1].y = imuPitchCur;
+  imuTrans.points[1].z = imuYawCur;
+  imuTrans.points[1].x = imuRollCur;
 
-  imuTrans.points[2].x = imuShiftFromStartXCur;
-  imuTrans.points[2].y = imuShiftFromStartYCur;
-  imuTrans.points[2].z = imuShiftFromStartZCur;
+  imuTrans.points[2].y = imuShiftFromStartXCur;
+  imuTrans.points[2].z = imuShiftFromStartYCur;
+  imuTrans.points[2].x = imuShiftFromStartZCur;
 
-  imuTrans.points[3].x = imuVeloFromStartXCur;
-  imuTrans.points[3].y = imuVeloFromStartYCur;
-  imuTrans.points[3].z = imuVeloFromStartZCur;
+  imuTrans.points[3].y = imuVeloFromStartXCur;
+  imuTrans.points[3].z = imuVeloFromStartYCur;
+  imuTrans.points[3].x = imuVeloFromStartZCur;
 
   sensor_msgs::PointCloud2 imuTransMsg;
   pcl::toROSMsg(imuTrans, imuTransMsg);

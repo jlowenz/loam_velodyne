@@ -8,7 +8,8 @@ find_package(catkin REQUIRED COMPONENTS
   roscpp
   rospy
   std_msgs
-  tf)
+  tf
+  velodyne_pointcloud)
 
 #find_package(Eigen3 REQUIRED)
 find_package(PCL REQUIRED)

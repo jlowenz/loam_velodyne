@@ -5,7 +5,9 @@
   <arg name="imu_topic" default="/imu/data"/>
   <arg name="n_scans" default="32"/>  
 
-  <node pkg="loam_velodyne" launch-prefix="gdb -ex run --args" type="scanRegistration" name="scanRegistration" output="screen">
+  <arg name="lprefix" value="gdb -ex run --args"/>
+  
+  <node pkg="loam_velodyne" launch-prefix="" type="scanRegistration" name="scanRegistration" output="screen">
     <param name="n_scans" value="$(arg n_scans)"/>
     <remap from="/velodyne_points" to="$(arg velodyne_topic)"/>
     <remap from="/imu/data" to="$(arg imu_topic)"/>
@@ -14,7 +16,9 @@
   <node pkg="loam_velodyne" type="laserOdometry" name="laserOdometry" output="screen" respawn="true">    
   </node>
 
-  <node pkg="loam_velodyne" type="laserMapping" name="laserMapping" output="screen"/>
+  <node pkg="loam_velodyne" type="laserMapping" name="laserMapping" output="screen">
+    <!--<remap from="/imu/data" to="$(arg imu_topic)"/>-->
+  </node>
   <node pkg="loam_velodyne" type="transformMaintenance" name="transformMaintenance" output="screen"/>
 
   <group if="$(arg rviz)">
